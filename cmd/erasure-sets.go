@@ -465,6 +465,8 @@ func newErasureSets(ctx context.Context, endpoints PoolEndpoints, storageDisks [
 				poolIndex:          poolIdx,
 				setDriveCount:      setDriveCount,
 				defaultParityCount: defaultParityCount,
+				setPlacement:       s.getHashedSet, // choose a way to place the parts of an object
+				setByIdx:           s.getSetByIdx,
 				getDisks:           s.GetDisks(i),
 				getLockers:         s.GetLockers(i),
 				getEndpoints:       s.GetEndpoints(i),
@@ -739,6 +741,13 @@ func hashKey(algo string, key string, cardinality int, id [16]byte) int {
 	}
 }
 
+func (s *erasureSets) getSetByIdx(idx int) (set *erasureObjects) {
+	if idx < 0 {
+		panic("should never happen")
+	}
+	return s.sets[idx]
+}
+
 // Returns always a same erasure coded set for a given input.
 func (s *erasureSets) getHashedSetIndex(input string) int {
 	return hashKey(s.distributionAlgo, input, len(s.sets), s.deploymentID)
@@ -746,7 +755,7 @@ func (s *erasureSets) getHashedSetIndex(input string) int {
 
 // Returns always a same erasure coded set for a given input.
 func (s *erasureSets) getHashedSet(input string) (set *erasureObjects) {
-	return s.sets[s.getHashedSetIndex(input)]
+	return s.getSetByIdx(s.getHashedSetIndex(input))
 }
 
 // GetBucketInfo - returns bucket info from one of the erasure coded set.
@@ -1077,8 +1086,7 @@ func (s *erasureSets) NewMultipartUpload(ctx context.Context, bucket, object str
 func (s *erasureSets) CopyObjectPart(ctx context.Context, srcBucket, srcObject, destBucket, destObject string, uploadID string, partID int,
 	startOffset int64, length int64, srcInfo ObjectInfo, srcOpts, dstOpts ObjectOptions,
 ) (partInfo PartInfo, err error) {
-	destSet := s.getHashedSet(destObject)
-	return destSet.PutObjectPart(ctx, destBucket, destObject, uploadID, partID, NewPutObjReader(srcInfo.Reader), dstOpts)
+	return s.PutObjectPart(ctx, destBucket, destObject, uploadID, partID, NewPutObjReader(srcInfo.Reader), dstOpts)
 }
 
 // PutObjectPart - writes part of an object to hashedSet based on the object name.
