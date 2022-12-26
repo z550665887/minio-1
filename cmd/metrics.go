@@ -38,6 +38,14 @@ var (
 		},
 		[]string{"api"},
 	)
+	httpRequestsDurationV1 = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "minio_http_requests_duration_seconds",
+			Help:    "Time taken by requests served by current Minio server instance",
+			Buckets: []float64{.001, .005, .01, .05, .1, 1,.25, .5, 1, 2.5, 5, 10},
+		},
+		[]string{"api"},
+	)
 	minioVersionInfo = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Namespace: "minio",
@@ -66,6 +74,7 @@ const (
 
 func init() {
 	prometheus.MustRegister(httpRequestsDuration)
+	prometheus.MustRegister(httpRequestsDurationV1)
 	prometheus.MustRegister(newMinioCollector())
 	prometheus.MustRegister(minioVersionInfo)
 }
@@ -651,6 +660,8 @@ func metricsHandler() http.Handler {
 	logger.CriticalIf(GlobalContext, registry.Register(minioVersionInfo))
 
 	logger.CriticalIf(GlobalContext, registry.Register(newMinioCollector()))
+
+	logger.CriticalIf(GlobalContext, registry.Register(httpRequestsDurationV1))
 
 	gatherers := prometheus.Gatherers{
 		prometheus.DefaultGatherer,

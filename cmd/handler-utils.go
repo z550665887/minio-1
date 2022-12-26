@@ -351,11 +351,23 @@ func collectAPIStats(api string, f http.HandlerFunc) http.HandlerFunc {
 		globalHTTPStats.currentS3Requests.Inc(api)
 		defer globalHTTPStats.currentS3Requests.Dec(api)
 
+		// Time start before the call is about to start.
+		tBefore := UTCNow()
+
 		statsWriter := logger.NewResponseWriter(w)
 
 		f.ServeHTTP(statsWriter, r)
 
-		globalHTTPStats.updateStats(api, r, statsWriter)
+		// Time after call has completed.
+		tAfter := UTCNow()
+
+		// Time duration in secs since the call started.
+		//
+		// We don't need to do nanosecond precision in this
+		// simply for the fact that it is not human readable.
+		durationSecs := tAfter.Sub(tBefore).Seconds()
+
+		globalHTTPStats.updateStats(api, r, statsWriter, durationSecs)
 	}
 }
 

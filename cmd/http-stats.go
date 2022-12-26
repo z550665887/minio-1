@@ -295,7 +295,7 @@ func (st *HTTPStats) toServerHTTPStats() ServerHTTPStats {
 }
 
 // Update statistics from http request and response data
-func (st *HTTPStats) updateStats(api string, r *http.Request, w *logger.ResponseWriter) {
+func (st *HTTPStats) updateStats(api string, r *http.Request, w *logger.ResponseWriter,, durationSecs float64) {
 	// Ignore non S3 requests
 	if strings.HasSuffix(r.URL.Path, minioReservedBucketPathWithSlash) {
 		return
@@ -305,6 +305,7 @@ func (st *HTTPStats) updateStats(api string, r *http.Request, w *logger.Response
 
 	// Increment the prometheus http request response histogram with appropriate label
 	httpRequestsDuration.With(prometheus.Labels{"api": api}).Observe(w.TimeToFirstByte.Seconds())
+	httpRequestsDurationV1.With(prometheus.Labels{"api": api}).Observe(durationSecs)
 
 	code := w.StatusCode
 
